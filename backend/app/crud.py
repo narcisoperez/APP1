@@ -1,29 +1,30 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from . import models, schemas
+import models as md
+import schemas as sch
 
-def listar_usuarios(db: Session, skip: int = 0, limit: int = 50) -> list[models.Usuario]:
-    stmt = select(models.Usuario).offset(skip).limit(limit)
+def listar_usuarios(db: Session, skip: int = 0, limit: int = 50) -> list[md.Usuario]:
+    stmt = select(md.Usuario).offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
 
-def obtener_usuario(db: Session, usuario_id: int) -> models.Usuario | None:
-    return db.get(models.Usuario, usuario_id)
+def obtener_usuario(db: Session, usuario_id: int) -> md.Usuario | None:
+    return db.get(md.Usuario, usuario_id)
 
-def obtener_por_email(db: Session, email: str) -> models.Usuario | None:
-    stmt = select(models.Usuario).where(models.Usuario.email == email)
+def obtener_por_email(db: Session, email: str) -> md.Usuario | None:
+    stmt = select(md.Usuario).where(md.Usuario.email == email)
     return db.execute(stmt).scalar_one_or_none()
 
-def crear_usuario(db: Session, data: schemas.UsuarioCreate) -> models.Usuario:
+def crear_usuario(db: Session, data: sch.UsuarioCreate) -> md.Usuario:
     existente = obtener_por_email(db, data.email)
     if existente:
         raise ValueError("El email ya está registrado")
-    usuario = models.Usuario(nombre=data.nombre, email=data.email)
+    usuario = md.Usuario(nombre=data.nombre, email=data.email)
     db.add(usuario)
-    db.flush()  # asegura que tenga ID
+    db.commit()
     db.refresh(usuario)
     return usuario
 
-def actualizar_usuario(db: Session, usuario: models.Usuario, data: schemas.UsuarioUpdate) -> models.Usuario:
+def actualizar_usuario(db: Session, usuario: md.Usuario, data: sch.UsuarioUpdate) -> md.Usuario:
     if data.nombre is not None:
         usuario.nombre = data.nombre
     if data.email is not None:
@@ -33,10 +34,9 @@ def actualizar_usuario(db: Session, usuario: models.Usuario, data: schemas.Usuar
                 raise ValueError("El email ya está registrado")
             usuario.email = data.email
     db.add(usuario)
-    db.flush()
+    db.commit()
     db.refresh(usuario)
     return usuario
 
-def eliminar_usuario(db: Session, usuario: models.Usuario) -> None:
+def eliminar_usuario(db: Session, usuario: md.Usuario) -> None:
     db.delete(usuario)
-    db.flush()
